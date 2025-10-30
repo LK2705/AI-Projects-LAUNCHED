@@ -7,3 +7,4 @@ Deep Learning
 Decision Tree
 Boosting alg 
 NLP
+Major project AI Study Pal
