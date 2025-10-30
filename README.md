@@ -1,5 +1,9 @@
-# sales-eda-project
-Exploratory Data Analysis on Sales Dataset
-Linear Regression and Non Linear regression on Sales dateset 
-Logistic Regression 
-Random Forest using XGBoost
+Eda 
+Linear regression 
+Logistic regression 
+Random forest with XG Boost
+Initialising a simple sequential model 
+Deep Learning 
+Decision Tree
+Boosting alg 
+NLP
