@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Study Pal</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #e8f5e8;
+            border-radius: 5px;
+            display: none;
+        }
+        .plan-item {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .quiz-item {
+            margin-bottom: 15px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .motivation {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 AI Study Pal</h1>
+        <p>Your personal AI study assistant</p>
+        
+        <div class="form-group">
+            <label for="subject">What subject are you studying?</label>
+            <input type="text" id="subject" placeholder="e.g., Math, Science, History" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="hours">How many hours do you want to study?</label>
+            <input type="number" id="hours" min="0.5" max="8" step="0.5" value="2" required>
+        </div>
+        
+        <button onclick="generatePlan()">Generate Study Plan</button>
+        
+        <div id="loading" style="display: none;">
+            <p>Creating your personalized study plan...</p>
+        </div>
+        
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        function generatePlan() {
+            const subject = document.getElementById('subject').value;
+            const hours = document.getElementById('hours').value;
+            
+            if (!subject) {
+                alert('Please enter a subject');
+                return;
+            }
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+            
+            fetch('/generate_plan', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    subject: subject,
+                    hours: hours
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+                
+                if (data.success) {
+                    displayResults(data);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            });
+        }
+        
+        function displayResults(data) {
+            const resultDiv = document.getElementById('result');
+            let html = `
+                <h2>📚 Your ${data.subject} Study Plan (${data.total_hours} hours)</h2>
+                
+                <h3>📅 Study Schedule:</h3>
+            `;
+            
+            data.plan.forEach(item => {
+                html += `
+                    <div class="plan-item">
+                        <strong>${item.time}</strong>: ${item.activity}
+                    </div>
+                `;
+            });
+            
+            html += `
+                <div class="motivation">
+                    <h3>💫 Motivation:</h3>
+                    <p>${data.motivation}</p>
+                </div>
+                
+                <h3>💡 Study Tips:</h3>
+                <ul>
+            `;
+            
+            data.tips.forEach(tip => {
+                html += `<li>${tip}</li>`;
+            });
+            
+            html += `</ul>`;
+            
+            html += `
+                <h3>📝 Quick Quiz:</h3>
+            `;
+            
+            if (data.quiz.length > 0) {
+                data.quiz.forEach((q, index) => {
+                    html += `
+                        <div class="quiz-item">
+                            <p><strong>Q${index + 1}:</strong> ${q.question}</p>
+                            <ul>
+                    `;
+                    q.options.forEach(option => {
+                        html += `<li>${option}</li>`;
+                    });
+                    html += `
+                            </ul>
+                            <p><em>Answer: ${q.answer}</em></p>
+                        </div>
+                    `;
+                });
+            } else {
+                html += `<p>No quiz questions available for this subject yet.</p>`;
+            }
+            
+            html += `
+                <button onclick="downloadSchedule('${data.subject}', ${JSON.stringify(data.plan).replace(/'/g, "\\'")})">
+                    📥 Download Schedule as CSV
+                </button>
+            `;
+            
+            resultDiv.innerHTML = html;
+            resultDiv.style.display = 'block';
+        }
+        
+        function downloadSchedule(subject, plan) {
+            fetch('/download_schedule', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    subject: subject,
+                    plan: plan
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const blob = new Blob([data.csv_content], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = data.filename;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            });
+        }
+    </script>
+</body>
+</html>
